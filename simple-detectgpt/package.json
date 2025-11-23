@@ -1,0 +1,13 @@
+{
+  "name": "simple-detectgpt",
+  "version": "1.0.0",
+  "description": "Simple DetectGPT-like AI detection service",
+  "main": "api/detect.js",
+  "scripts": {
+    "start": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "keywords": ["ai-detection", "detectgpt", "text-analysis"],
+  "author": "AI Education Dashboard",
+  "license": "MIT"
+}

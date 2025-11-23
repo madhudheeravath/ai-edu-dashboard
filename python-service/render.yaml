@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: detectgpt-service
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: PYTHON_VERSION
+        value: 3.11.0
+    disk:
+      name: detectgpt-disk
+      mountPath: /opt/render/project/src
+      sizeGB: 1

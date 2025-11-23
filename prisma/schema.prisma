@@ -1,0 +1,181 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Student {
+  id              String        @id @default(cuid())
+  studentId       String        @unique
+  email           String        @unique
+  password        String
+  name            String
+  year            Int
+  major           String
+  firstGen        Boolean
+  priorGpa        Float
+  gender          String
+  aiAwareness     Float
+  enrollmentDate  DateTime
+  semester        String
+  submissions     Submission[]
+  reflections     Reflection[]
+  chatMessages    ChatMessage[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model Faculty {
+  id                String             @id @default(cuid())
+  facultyId         String             @unique
+  email             String             @unique
+  password          String
+  name              String
+  major             String
+  expYears          Float
+  aiLiteracy        Float
+  dashboardAdoption DateTime
+  numCourses        Int
+  assignments       Assignment[]
+  submissions       Submission[]
+  rubricEvals       RubricEvaluation[]
+  activities        FacultyActivity[]
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+}
+
+model Assignment {
+  id                  String       @id @default(cuid())
+  assignmentId        String       @unique
+  facultyId           String
+  faculty             Faculty      @relation(fields: [facultyId], references: [facultyId])
+  title               String
+  description         String?
+  type                String
+  major               String
+  year                Int          @default(1)
+  dueDate             DateTime
+  aiAllowed           Boolean
+  aiLockedUntilDraft  Boolean
+  createdDate         DateTime
+  submissions         Submission[]
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+}
+
+model Submission {
+  id                     String             @id @default(cuid())
+  submissionId           String             @unique
+  assignmentId           String
+  assignment             Assignment         @relation(fields: [assignmentId], references: [assignmentId])
+  studentId              String
+  student                Student            @relation(fields: [studentId], references: [studentId])
+  facultyId              String
+  faculty                Faculty            @relation(fields: [facultyId], references: [facultyId])
+  submissionDate         DateTime
+  usesAi                 Boolean
+  aiAccessHours          Float
+  draftScore             Float
+  finalScore             Float
+  creativityScore        Float
+  aiDetected             Boolean
+  aiConfidence           Float
+  timeHours              Float
+  status                 String
+  aiAssistanceType       String?
+  criticalThinkingScore  Float
+  satisfactionLevel      Float
+  draftContent           String?
+  finalContent           String?
+  reflection             Reflection?
+  rubricEval             RubricEvaluation?
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+}
+
+model Reflection {
+  id           String     @id @default(cuid())
+  reflectionId String     @unique
+  submissionId String     @unique
+  submission   Submission @relation(fields: [submissionId], references: [submissionId])
+  studentId    String
+  student      Student    @relation(fields: [studentId], references: [studentId])
+  type         String
+  depthScore   Float
+  words        Int
+  content      String
+  date         DateTime
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model RubricEvaluation {
+  id                   String     @id @default(cuid())
+  rubricId             String     @unique
+  submissionId         String     @unique
+  submission           Submission @relation(fields: [submissionId], references: [submissionId])
+  facultyId            String
+  faculty              Faculty    @relation(fields: [facultyId], references: [facultyId])
+  studentId            String
+  originality          Float
+  effort               Float
+  facultyAiIdentified  Boolean
+  assessmentDate       DateTime
+  finalGrade           Float
+  confidence           Float
+  feedback             String?
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+}
+
+model FacultyActivity {
+  id          String   @id @default(cuid())
+  activityId  String   @unique
+  facultyId   String
+  faculty     Faculty  @relation(fields: [facultyId], references: [facultyId])
+  activity    String
+  timestamp   DateTime
+  durationMin Int
+  resource    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [studentId])
+  role      String
+  content   String
+  timestamp DateTime @default(now())
+  metadata  String?
+}
+
+model AIDetectionResult {
+  id                   String   @id @default(cuid())
+  submissionId         String
+  stage                String   // "draft" or "final"
+  aiLikelihood         Int      // 0-100
+  humanLikelihood      Int      // 0-100
+  confidence           String   // "High", "Medium", "Low"
+  verdict              String
+  wordCount            Int
+  sentenceCount        Int
+  avgWordsPerSentence  Float
+  vocabularyRichness   Float
+  readabilityScore     Float
+  hasAIMarkers         Boolean
+  formalityLevel       String
+  sentenceVariation    Float
+  hasPersonalTouch     Boolean
+  wordsAdded           Int
+  wordsRemoved         Int
+  percentageChange     Float
+  significantlyModified Boolean
+  analyzedAt           DateTime @default(now())
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}

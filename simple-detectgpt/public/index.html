@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DetectGPT-Lite Service</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .status {
+            padding: 10px 20px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .healthy {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .info {
+            background: #e7f3ff;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .endpoint {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: monospace;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        textarea {
+            width: 100%;
+            height: 100px;
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .result {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 DetectGPT-Lite AI Detection Service</h1>
+        
+        <div id="status">
+            <span class="status">🔄 Checking service status...</span>
+        </div>
+
+        <div class="info">
+            <h3>📋 Service Information</h3>
+            <p><strong>Purpose:</strong> Advanced AI content detection for educational platforms</p>
+            <p><strong>Method:</strong> DetectGPT-like heuristic analysis with pattern recognition</p>
+            <p><strong>Features:</strong> Perplexity scoring, AI/Human pattern detection, confidence assessment</p>
+        </div>
+
+        <div class="info">
+            <h3>🔗 API Endpoints</h3>
+            <div class="endpoint">
+                <strong>GET /api/detect</strong> - Health check and service info
+            </div>
+            <div class="endpoint">
+                <strong>POST /api/detect</strong> - Analyze text for AI content
+                <br>Body: {"text": "Your text here"}
+            </div>
+        </div>
+
+        <div class="info">
+            <h3>🧪 Test the API</h3>
+            <textarea id="testText" placeholder="Enter text to analyze for AI detection...">It is important to note that renewable energy represents a crucial component in addressing climate change. Furthermore, the implementation of sustainable technologies requires comprehensive analysis.</textarea>
+            <br>
+            <button onclick="testDetection()">🔍 Analyze Text</button>
+            <button onclick="clearResults()">🗑️ Clear Results</button>
+            
+            <div id="testResult"></div>
+        </div>
+
+        <div class="info">
+            <h3>📊 Integration</h3>
+            <p>This service is integrated with the AI Education Dashboard for real-time AI content detection in student submissions.</p>
+            <p><strong>Dashboard URL:</strong> <a href="https://ai-edu-dashboard-sigma.vercel.app" target="_blank">ai-edu-dashboard-sigma.vercel.app</a></p>
+        </div>
+    </div>
+
+    <script>
+        // Check service status
+        async function checkStatus() {
+            try {
+                const response = await fetch('/api/detect');
+                const data = await response.json();
+                const statusEl = document.getElementById('status');
+                
+                if (data.status === 'healthy') {
+                    statusEl.innerHTML = `
+                        <div class="status healthy">
+                            ✅ Service Online - ${data.service} v${data.version}
+                            <br>Method: ${data.method}
+                        </div>
+                    `;
+                } else {
+                    statusEl.innerHTML = '<div class="status" style="background: #f8d7da; color: #721c24;">❌ Service Offline</div>';
+                }
+            } catch (error) {
+                const statusEl = document.getElementById('status');
+                statusEl.innerHTML = '<div class="status" style="background: #fff3cd; color: #856404;">⚠️ Status Check Failed</div>';
+            }
+        }
+
+        // Test AI detection
+        async function testDetection() {
+            const text = document.getElementById('testText').value;
+            const resultEl = document.getElementById('testResult');
+            
+            if (!text.trim()) {
+                resultEl.innerHTML = '<div class="result" style="color: red;">Please enter some text to analyze.</div>';
+                return;
+            }
+
+            resultEl.innerHTML = '<div class="result">🔄 Analyzing text...</div>';
+
+            try {
+                const response = await fetch('/api/detect', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ text: text })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultEl.innerHTML = `
+                        <div class="result">
+<strong>🎯 Detection Results:</strong>
+AI Likelihood: ${data.aiLikelihood}%
+Human Likelihood: ${data.humanLikelihood}%
+Confidence: ${data.confidence}
+Verdict: ${data.verdict}
+
+<strong>📊 Analysis Details:</strong>
+Word Count: ${data.wordCount}
+Sentences: ${data.sentenceCount}
+AI Markers: ${data.aiMarkerCount}
+Has Personal Touch: ${data.hasPersonalTouch}
+Formality Level: ${data.formalityLevel}
+Processing Time: ${data.processingTime}ms
+
+Method: ${data.method}
+                        </div>
+                    `;
+                } else {
+                    resultEl.innerHTML = `<div class="result" style="color: red;">Error: ${data.error || 'Analysis failed'}</div>`;
+                }
+            } catch (error) {
+                resultEl.innerHTML = `<div class="result" style="color: red;">Network Error: ${error.message}</div>`;
+            }
+        }
+
+        function clearResults() {
+            document.getElementById('testResult').innerHTML = '';
+            document.getElementById('testText').value = '';
+        }
+
+        // Check status on page load
+        checkStatus();
+    </script>
+</body>
+</html>

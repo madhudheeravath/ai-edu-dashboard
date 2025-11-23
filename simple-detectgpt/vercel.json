@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "functions": {
+    "api/detect.js": {
+      "maxDuration": 30
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/api/detect"
+    },
+    {
+      "source": "/health",
+      "destination": "/api/detect"
+    }
+  ]
+}
