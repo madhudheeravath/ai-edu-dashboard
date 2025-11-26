@@ -44,7 +44,7 @@ export default function LoginPage() {
           title: "Welcome back!",
           description: "Successfully signed in.",
         })
-        
+
         // Redirect based on role
         if (role === "student") {
           router.push("/student/dashboard")
@@ -66,8 +66,8 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 via-white to-primary-100 p-4">
       {/* Back to Home Button */}
-      <Link 
-        href="/" 
+      <Link
+        href="/"
         className="absolute top-4 left-4 flex items-center gap-2 text-gray-600 hover:text-primary transition-colors"
       >
         <ArrowLeft className="h-4 w-4" />
@@ -88,7 +88,7 @@ export default function LoginPage() {
             Sign in to your AI Education Platform account
           </CardDescription>
         </CardHeader>
-        
+
         <CardContent>
           <Tabs defaultValue="student" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-6">
@@ -140,7 +140,7 @@ export default function LoginPage() {
                   {loading ? "Signing in..." : "Sign In as Student"}
                 </Button>
               </form>
-              
+
               <div className="mt-6 text-center text-sm text-gray-600">
                 Don't have an account?{" "}
                 <Link href="/signup" className="text-primary font-medium hover:underline">
@@ -187,7 +187,7 @@ export default function LoginPage() {
                   {loading ? "Signing in..." : "Sign In as Faculty"}
                 </Button>
               </form>
-              
+
               <div className="mt-6 text-center text-sm text-gray-600">
                 Need faculty access?{" "}
                 <Link href="/contact" className="text-primary font-medium hover:underline">
@@ -205,16 +205,7 @@ export default function LoginPage() {
             </Link>
           </div>
 
-          {/* Demo Credentials Info */}
-          <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <p className="text-xs font-semibold text-blue-900 mb-2">✅ Working Credentials:</p>
-            <div className="text-xs text-blue-800 space-y-1">
-              <p><strong>Student:</strong> student@university.edu / password123</p>
-              <p><strong>Faculty:</strong> faculty@university.edu / password123</p>
-              <p className="text-blue-600 mt-2"><strong>Or any:</strong> stu10004@university.edu / password123</p>
-              <p className="text-blue-600"><strong>Or any:</strong> fac1001@university.edu / password123</p>
-            </div>
-          </div>
+
         </CardContent>
       </Card>
     </div>

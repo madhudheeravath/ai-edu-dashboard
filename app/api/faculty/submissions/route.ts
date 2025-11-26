@@ -6,14 +6,14 @@ import prisma from "@/lib/prisma"
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
+
     if (!session || !session.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     // Get faculty email from session
     const facultyEmail = session.user.email
-    
+
     // Find faculty
     const faculty = await prisma.faculty.findUnique({
       where: { email: facultyEmail as string }
@@ -72,7 +72,7 @@ export async function GET(req: NextRequest) {
         submissionDate: 'desc'
       }
     })
-    
+
     // Fetch AI detection results for these submissions
     const submissionIds = submissions.map(s => s.submissionId)
     const aiDetectionResults = await prisma.aIDetectionResult.findMany({
@@ -97,9 +97,20 @@ export async function GET(req: NextRequest) {
     // Transform for frontend
     const transformedSubmissions = submissions.map(sub => {
       // Get AI detection result for this submission
-      const aiDetection = aiDetectionResults.find(d => d.submissionId === sub.submissionId)
-      const aiDetected = aiDetection ? aiDetection.aiLikelihood : 0
-      
+      // Get AI detection result for this submission
+      // Prioritize the confidence score stored on the submission itself as it reflects the latest state
+      let aiDetected = sub.aiConfidence ? Math.round(sub.aiConfidence * 100) : 0
+
+      // Fallback: If 0, check if we have a detection result record (could be from draft)
+      if (aiDetected === 0) {
+        const aiDetection = aiDetectionResults.find(d => d.submissionId === sub.submissionId)
+        if (aiDetection) {
+          // Only use this if we really don't have a score on the submission
+          // But be careful as this might be a draft score
+          aiDetected = aiDetection.aiLikelihood
+        }
+      }
+
       return {
         id: sub.submissionId,
         submissionId: sub.submissionId,

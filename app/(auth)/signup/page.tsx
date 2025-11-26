@@ -89,7 +89,7 @@ export default function SignUpPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!validateForm()) return
 
     setLoading(true)
@@ -233,15 +233,16 @@ export default function SignUpPage() {
                         <SelectValue placeholder="Select your major" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Computer Science">Computer Science</SelectItem>
-                        <SelectItem value="Engineering">Engineering</SelectItem>
+                        <SelectItem value="CS">Computer Science (CS)</SelectItem>
                         <SelectItem value="Business">Business</SelectItem>
                         <SelectItem value="Psychology">Psychology</SelectItem>
                         <SelectItem value="Biology">Biology</SelectItem>
-                        <SelectItem value="Mathematics">Mathematics</SelectItem>
+                        <SelectItem value="Math">Mathematics</SelectItem>
                         <SelectItem value="English">English</SelectItem>
                         <SelectItem value="History">History</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
+                        <SelectItem value="Physics">Physics</SelectItem>
+                        <SelectItem value="Chemistry">Chemistry</SelectItem>
+                        <SelectItem value="Economics">Economics</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -303,15 +304,10 @@ export default function SignUpPage() {
                         <SelectValue placeholder="Select department" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Computer Science">Computer Science</SelectItem>
-                        <SelectItem value="Engineering">Engineering</SelectItem>
+                        <SelectItem value="CS">Computer Science (CS)</SelectItem>
+                        <SelectItem value="Sciences">Sciences</SelectItem>
+                        <SelectItem value="Arts">Arts</SelectItem>
                         <SelectItem value="Business">Business</SelectItem>
-                        <SelectItem value="Psychology">Psychology</SelectItem>
-                        <SelectItem value="Biology">Biology</SelectItem>
-                        <SelectItem value="Mathematics">Mathematics</SelectItem>
-                        <SelectItem value="English">English</SelectItem>
-                        <SelectItem value="History">History</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
