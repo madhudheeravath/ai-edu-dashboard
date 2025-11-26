@@ -150,7 +150,7 @@ export async function POST(req: NextRequest) {
           major: department, // Using department as major field
           expYears: parseInt(expYears),
           aiLiteracy: aiLiteracy ? parseFloat(aiLiteracy) : 3.0,
-          dashboardAdoption: dashboardAdoption || "medium",
+          dashboardAdoption: new Date(),
           numCourses: numCourses ? parseInt(numCourses) : 2,
           createdAt: new Date(),
           updatedAt: new Date()
@@ -176,7 +176,7 @@ export async function POST(req: NextRequest) {
 
   } catch (error: any) {
     console.error("Signup error:", error)
-    
+
     // Handle Prisma unique constraint violations
     if (error.code === 'P2002') {
       const field = error.meta?.target?.[0]

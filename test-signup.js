@@ -2,11 +2,11 @@
 const testSignup = async () => {
   const testUser = {
     name: "Test Student",
-    email: "test.student@university.edu",
+    email: "test.student.2@university.edu",
     password: "password123",
     confirmPassword: "password123",
     role: "student",
-    studentId: "STU99999",
+    studentId: "STU99998",
     major: "Computer Science",
     semester: "3",
     aiAwareness: "3"
@@ -23,7 +23,7 @@ const testSignup = async () => {
 
     const data = await response.json()
     console.log('Signup test result:', data)
-    
+
     if (response.ok) {
       console.log('✅ Signup API working correctly!')
     } else {
@@ -35,6 +35,4 @@ const testSignup = async () => {
 }
 
 console.log('🧪 Testing signup API...')
-console.log('Note: This test requires the local server to be running on port 3000')
-console.log('Run: npm run dev')
-console.log('Then run: node test-signup.js')
+testSignup()
