@@ -3,17 +3,19 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
+
     if (!session || !session.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     // Get student ID from session
     const studentEmail = session.user.email
-    
+
     // Find student
     const student = await prisma.student.findUnique({
       where: { email: studentEmail as string }
@@ -59,7 +61,7 @@ export async function GET(req: NextRequest) {
     // Transform data for frontend
     const assignmentsWithStatus = assignments.map(assignment => {
       const submission = assignment.submissions[0] // Get student's submission if exists
-      
+
       return {
         id: assignment.assignmentId,
         assignmentId: assignment.assignmentId,

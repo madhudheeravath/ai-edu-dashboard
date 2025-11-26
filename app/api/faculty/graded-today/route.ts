@@ -3,16 +3,18 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
+
     if (!session || !session.user || session.user.role !== "faculty") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     const facultyEmail = session.user.email
-    
+
     // Find faculty
     const faculty = await prisma.faculty.findUnique({
       where: { email: facultyEmail as string }

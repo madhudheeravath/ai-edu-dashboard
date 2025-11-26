@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)
@@ -45,7 +47,7 @@ export async function GET() {
 
     // Get assignments for this student's year AND major, or fallback to any assignments
     let allAssignments = await prisma.assignment.findMany({
-      where: { 
+      where: {
         year: studentYear,
         major: studentMajor
       }
@@ -106,7 +108,7 @@ export async function GET() {
       }))
 
     // Active assignments (all assignments with future due dates)
-    const activeAssignments = allAssignments.filter(a => 
+    const activeAssignments = allAssignments.filter(a =>
       new Date(a.dueDate) > now
     ).length
 
@@ -117,7 +119,7 @@ export async function GET() {
     }).length
 
     // Completed assignments (submitted)
-    const completedAssignments = submissions.filter(s => 
+    const completedAssignments = submissions.filter(s =>
       s.status === "Submitted" || s.status === "Graded" || s.status === "completed"
     ).length
 
@@ -125,7 +127,7 @@ export async function GET() {
     const validCreativityScores = submissions
       .filter(s => s.creativityScore > 0)
       .map(s => s.creativityScore)
-    
+
     const avgCreativity = validCreativityScores.length > 0
       ? validCreativityScores.reduce((a, b) => a + b, 0) / validCreativityScores.length
       : 0
@@ -160,7 +162,7 @@ export async function GET() {
     const validGrades = submissions
       .filter(s => s.finalScore > 0)
       .map(s => s.finalScore)
-    
+
     const avgGrade = validGrades.length > 0
       ? validGrades.reduce((a, b) => a + b, 0) / validGrades.length
       : 0

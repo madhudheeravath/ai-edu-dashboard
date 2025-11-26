@@ -3,16 +3,18 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
+
     if (!session || !session.user || session.user.role !== "faculty") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     const facultyEmail = session.user.email
-    
+
     // Find faculty
     const faculty = await prisma.faculty.findUnique({
       where: { email: facultyEmail as string }
@@ -39,7 +41,7 @@ export async function GET(req: NextRequest) {
         }
       }
     })
-    
+
     // Get AI detection results for these submissions
     const submissionIds = submissions.map(s => s.submissionId)
     const aiDetectionResults = await prisma.aIDetectionResult.findMany({
@@ -58,7 +60,7 @@ export async function GET(req: NextRequest) {
 
     submissions.forEach(sub => {
       const studentId = sub.student.studentId
-      
+
       if (!studentMap.has(studentId)) {
         studentMap.set(studentId, {
           studentId: sub.student.studentId,
@@ -83,23 +85,23 @@ export async function GET(req: NextRequest) {
     // Transform to final format
     const studentsData = Array.from(studentMap.values()).map(student => {
       const totalSubmissions = student.submissions.length
-      
+
       // Calculate average AI likelihood from AI detection results
       const studentSubmissionIds = student.submissions.map((s: any) => s.submissionId)
-      const studentAiDetections = aiDetectionResults.filter(d => 
+      const studentAiDetections = aiDetectionResults.filter(d =>
         studentSubmissionIds.includes(d.submissionId)
       )
-      
+
       const avgAI = studentAiDetections.length > 0
         ? Math.min(100, Math.round(
-            studentAiDetections.reduce((sum, d) => sum + d.aiLikelihood, 0) / studentAiDetections.length
-          ))
+          studentAiDetections.reduce((sum, d) => sum + d.aiLikelihood, 0) / studentAiDetections.length
+        ))
         : 0
 
       const creativityScores = student.submissions
         .filter((s: any) => s.creativityScore > 0)
         .map((s: any) => s.creativityScore)
-      
+
       const avgCreativity = creativityScores.length > 0
         ? creativityScores.reduce((a: number, b: number) => a + b, 0) / creativityScores.length
         : 0

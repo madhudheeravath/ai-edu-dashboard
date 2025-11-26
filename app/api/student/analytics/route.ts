@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -58,7 +60,7 @@ export async function GET(req: NextRequest) {
     // Calculate statistics
     const totalSubmissions = submissions.length
     const completedAssignments = submissions.filter(s => s.status === "Submitted" || s.status === "Graded").length
-    
+
     const avgCreativity = submissions.length > 0
       ? submissions.reduce((sum, s) => sum + s.creativityScore, 0) / submissions.length
       : 0

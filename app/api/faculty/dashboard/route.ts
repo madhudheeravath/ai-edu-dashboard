@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)
@@ -47,17 +49,17 @@ export async function GET() {
 
     // Calculate stats
     const now = new Date()
-    
+
     // Total unique students (who have submitted work)
     const uniqueStudentIds = new Set(submissions.map(s => s.studentId))
     const totalStudents = uniqueStudentIds.size
-    
+
     // Count courses (assignments)
     const totalCourses = assignments.length
-    
+
     // Pending reviews (submissions that are submitted but not graded)
     const pendingReviews = submissions.filter(s => s.status === "Submitted").length
-    
+
     // Due this week (submissions pending and assignments due within 7 days)
     const oneWeekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
     const dueThisWeek = submissions.filter(s => {
@@ -66,30 +68,30 @@ export async function GET() {
       const dueDate = new Date(assignment.dueDate)
       return s.status === "Submitted" && dueDate > now && dueDate <= oneWeekFromNow
     }).length
-    
+
     // Average creativity score
     const validCreativityScores = submissions
       .filter(s => s.creativityScore > 0)
       .map(s => s.creativityScore)
-    
+
     const avgCreativity = validCreativityScores.length > 0
       ? validCreativityScores.reduce((a, b) => a + b, 0) / validCreativityScores.length
       : 0
-    
+
     // AI usage rate (percentage of students using AI)
     const aiUsedCount = submissions.filter(s => s.usesAi).length
     const aiUsageRate = submissions.length > 0
       ? Math.min(100, Math.round((aiUsedCount / submissions.length) * 100))
       : 0
-    
+
     // Graded submissions
     const gradedSubmissions = submissions.filter(s => s.status === "Graded").length
-    
+
     // Average grade
     const validGrades = submissions
       .filter(s => s.finalScore > 0)
       .map(s => s.finalScore)
-    
+
     const avgGrade = validGrades.length > 0
       ? validGrades.reduce((a, b) => a + b, 0) / validGrades.length
       : 0
