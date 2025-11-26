@@ -17,7 +17,11 @@ export async function GET(req: NextRequest) {
 
     // Find faculty
     const faculty = await prisma.faculty.findUnique({
-      where: { email: facultyEmail as string }
+      where: { email: facultyEmail as string },
+      select: {
+        facultyId: true,
+        major: true
+      }
     })
 
     if (!faculty) {
@@ -41,6 +45,25 @@ export async function GET(req: NextRequest) {
         }
       }
     })
+
+    // For new faculty with no submissions, get students from their department/major
+    let allStudents: any[] = []
+    if (submissions.length === 0) {
+      allStudents = await prisma.student.findMany({
+        where: {
+          major: faculty.major
+        },
+        select: {
+          studentId: true,
+          name: true,
+          email: true,
+          year: true,
+          major: true,
+          priorGpa: true,
+          firstGen: true
+        }
+      })
+    }
 
     // Get AI detection results for these submissions
     const submissionIds = submissions.map(s => s.submissionId)
@@ -120,6 +143,24 @@ export async function GET(req: NextRequest) {
         avgCreativity: parseFloat(avgCreativity.toFixed(1))
       }
     })
+
+    // If no students with submissions, add students from faculty's department
+    if (studentsData.length === 0 && allStudents.length > 0) {
+      const departmentStudents = allStudents.map(student => ({
+        id: student.studentId,
+        studentId: student.studentId,
+        name: student.name,
+        email: student.email,
+        year: student.year,
+        major: student.major,
+        priorGpa: student.priorGpa,
+        firstGen: student.firstGen,
+        submissions: 0,
+        avgAI: 0,
+        avgCreativity: 0
+      }))
+      studentsData.push(...departmentStudents)
+    }
 
     // Sort by name
     studentsData.sort((a, b) => a.name.localeCompare(b.name))
