@@ -25,12 +25,29 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Faculty not found" }, { status: 404 })
     }
 
+    // Get faculty's subjects
+    let facultySubjects: any[] = []
+    try {
+      const fs = await prisma.facultySubject.findMany({
+        where: {
+          facultyId: faculty.facultyId,
+          isActive: true
+        },
+        include: {
+          subject: true
+        }
+      })
+      facultySubjects = fs.map(f => f.subject)
+    } catch (e) {
+      // FacultySubject table might not exist
+    }
+
     // Get query params
     const { searchParams } = new URL(req.url)
     const status = searchParams.get('status') // pending, graded, flagged
     const search = searchParams.get('search')
 
-    // Build where clause
+    // Build where clause - get all submissions for this faculty
     const where: any = {
       facultyId: faculty.facultyId
     }
@@ -57,9 +74,18 @@ export async function GET(req: NextRequest) {
         assignment: {
           select: {
             assignmentId: true,
+            title: true,
             type: true,
             major: true,
-            aiAllowed: true
+            aiAllowed: true,
+            subjectId: true,
+            subject: {
+              select: {
+                id: true,
+                subjectCode: true,
+                name: true
+              }
+            }
           }
         },
         rubricEval: {
@@ -99,7 +125,6 @@ export async function GET(req: NextRequest) {
     // Transform for frontend
     const transformedSubmissions = submissions.map(sub => {
       // Get AI detection result for this submission
-      // Get AI detection result for this submission
       // Prioritize the confidence score stored on the submission itself as it reflects the latest state
       let aiDetected = sub.aiConfidence ? Math.round(sub.aiConfidence * 100) : 0
 
@@ -119,8 +144,11 @@ export async function GET(req: NextRequest) {
         student: sub.student.name,
         studentId: sub.student.studentId,
         studentEmail: sub.student.email,
-        assignment: `${sub.assignment.type} - ${sub.assignment.major}`,
+        assignment: sub.assignment.title || `${sub.assignment.type} - ${sub.assignment.major}`,
         assignmentType: sub.assignment.type,
+        type: sub.assignment.type,
+        subjectId: sub.assignment.subjectId,
+        subject: sub.assignment.subject,
         submittedAt: sub.submissionDate,
         aiDetected: Math.min(100, Math.round(aiDetected)),
         aiConfidence: aiDetected,
@@ -136,6 +164,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       submissions: transformedSubmissions,
+      subjects: facultySubjects,
       total: transformedSubmissions.length
     })
   } catch (error: any) {

@@ -163,7 +163,7 @@ export default function StudentDashboard() {
             </CardHeader>
             <CardContent>
               <p className="text-xs text-gray-500">
-                {loading ? "Loading..." : `${aiHoursPerWeek.toFixed(1)} hours per week`}
+                {loading ? "Loading..." : `${stats?.totalSubmissions || 0} submissions this semester`}
               </p>
             </CardContent>
           </Card>
@@ -182,7 +182,24 @@ export default function StudentDashboard() {
         </div>
 
         {/* Feature Preview Cards */}
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid md:grid-cols-3 gap-6">
+          <Link href="/student/subjects" className="block">
+            <Card className="border-2 border-indigo-200 hover:border-indigo-400 transition-colors cursor-pointer h-full">
+              <CardHeader>
+                <div className="h-12 w-12 bg-indigo-100 rounded-lg flex items-center justify-center mb-4">
+                  <BookOpen className="h-6 w-6 text-indigo-600" />
+                </div>
+                <CardTitle>My Subjects</CardTitle>
+                <CardDescription>
+                  Enroll in subjects and view your current courses.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button variant="outline" className="w-full">Manage Subjects</Button>
+              </CardContent>
+            </Card>
+          </Link>
+
           <Link href="/student/assignments" className="block">
             <Card className="border-2 border-primary/20 hover:border-primary transition-colors cursor-pointer h-full">
               <CardHeader>
@@ -309,7 +326,13 @@ export default function StudentDashboard() {
             <CardDescription>Common tasks and helpful links</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid md:grid-cols-3 gap-4">
+            <div className="grid md:grid-cols-4 gap-4">
+              <Link href="/student/subjects" className="block">
+                <Button variant="outline" className="w-full h-auto py-4 flex flex-col items-center gap-2">
+                  <GraduationCap className="h-5 w-5" />
+                  <span className="text-sm">My Subjects</span>
+                </Button>
+              </Link>
               <Link href="/student/assignments" className="block">
                 <Button variant="outline" className="w-full h-auto py-4 flex flex-col items-center gap-2">
                   <BookOpen className="h-5 w-5" />

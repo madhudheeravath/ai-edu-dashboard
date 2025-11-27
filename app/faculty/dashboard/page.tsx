@@ -193,7 +193,21 @@ export default function FacultyDashboard() {
         ) : null}
 
         {/* Quick Access Cards */}
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-4 gap-6">
+          <Link href="/faculty/subjects">
+            <Card className="border-2 border-indigo-200 hover:border-indigo-400 hover:shadow-lg transition-all cursor-pointer h-full">
+              <CardHeader>
+                <div className="h-12 w-12 bg-indigo-100 rounded-lg flex items-center justify-center mb-4">
+                  <BookOpen className="h-6 w-6 text-indigo-600" />
+                </div>
+                <CardTitle>My Subjects</CardTitle>
+                <CardDescription>
+                  Manage the subjects you teach and view enrolled students.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+
           <Link href="/faculty/assignments">
             <Card className="border-2 border-purple-200 hover:border-purple-400 hover:shadow-lg transition-all cursor-pointer h-full">
               <CardHeader>

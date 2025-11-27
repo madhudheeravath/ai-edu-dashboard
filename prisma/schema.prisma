@@ -7,10 +7,53 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Subject model - each subject can have multiple students and faculty
+model Subject {
+  id              String            @id @default(cuid())
+  subjectCode     String            @unique
+  name            String
+  description     String?
+  credits         Int               @default(3)
+  department      String
+  semester        Int               @default(1)
+  isActive        Boolean           @default(true)
+  students        StudentSubject[]
+  faculty         FacultySubject[]
+  assignments     Assignment[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+}
+
+// Many-to-many relation: Student can have 3-4 subjects
+model StudentSubject {
+  id          String   @id @default(cuid())
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [studentId])
+  subjectId   String
+  subject     Subject  @relation(fields: [subjectId], references: [id])
+  enrolledAt  DateTime @default(now())
+  isActive    Boolean  @default(true)
+  
+  @@unique([studentId, subjectId])
+}
+
+// Many-to-many relation: Faculty can teach 3-4 subjects
+model FacultySubject {
+  id          String   @id @default(cuid())
+  facultyId   String
+  faculty     Faculty  @relation(fields: [facultyId], references: [facultyId])
+  subjectId   String
+  subject     Subject  @relation(fields: [subjectId], references: [id])
+  assignedAt  DateTime @default(now())
+  isActive    Boolean  @default(true)
+  
+  @@unique([facultyId, subjectId])
+}
+
 model Student {
-  id              String        @id @default(cuid())
-  studentId       String        @unique
-  email           String        @unique
+  id              String            @id @default(cuid())
+  studentId       String            @unique
+  email           String            @unique
   password        String
   name            String
   year            Int
@@ -21,11 +64,12 @@ model Student {
   aiAwareness     Float
   enrollmentDate  DateTime
   semester        String
+  subjects        StudentSubject[]
   submissions     Submission[]
   reflections     Reflection[]
   chatMessages    ChatMessage[]
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
 }
 
 model Faculty {
@@ -39,6 +83,7 @@ model Faculty {
   aiLiteracy        Float
   dashboardAdoption DateTime
   numCourses        Int
+  subjects          FacultySubject[]
   assignments       Assignment[]
   submissions       Submission[]
   rubricEvals       RubricEvaluation[]
@@ -52,6 +97,8 @@ model Assignment {
   assignmentId        String       @unique
   facultyId           String
   faculty             Faculty      @relation(fields: [facultyId], references: [facultyId])
+  subjectId           String?
+  subject             Subject?     @relation(fields: [subjectId], references: [id])
   title               String
   description         String?
   type                String

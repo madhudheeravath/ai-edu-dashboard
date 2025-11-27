@@ -26,6 +26,14 @@ export async function GET(req: NextRequest) {
     const assignments = await prisma.assignment.findMany({
       where: { facultyId: faculty.facultyId },
       include: {
+        subject: {
+          select: {
+            id: true,
+            subjectCode: true,
+            name: true,
+            department: true
+          }
+        },
         _count: {
           select: { submissions: true }
         }
@@ -41,6 +49,8 @@ export async function GET(req: NextRequest) {
       type: assignment.type,
       major: assignment.major,
       year: assignment.year,
+      subjectId: assignment.subjectId,
+      subject: assignment.subject,
       dueDate: assignment.dueDate,
       aiAllowed: assignment.aiAllowed,
       aiLockedUntilDraft: assignment.aiLockedUntilDraft,
@@ -81,22 +91,22 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { title, description, type, major, year, dueDate, aiAllowed, aiLockedUntilDraft } = body
+    const { title, description, type, major, year, dueDate, aiAllowed, aiLockedUntilDraft, subjectId } = body
 
     // Log received data for debugging
-    console.log('Received assignment data:', { title, type, major, year: typeof year, yearValue: year, dueDate })
+    console.log('Received assignment data:', { title, type, major, year: typeof year, yearValue: year, dueDate, subjectId })
 
     // Validate required fields
-    if (!title || !type || !major || !dueDate || !year) {
+    if (!title || !type || !dueDate) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Missing required fields (title, type, dueDate)" },
         { status: 400 }
       )
     }
 
-    // Parse year to integer
-    const yearInt = parseInt(year)
-    if (isNaN(yearInt) || yearInt < 1 || yearInt > 4) {
+    // Parse year to integer (default to 1 if not provided)
+    const yearInt = parseInt(year) || 1
+    if (yearInt < 1 || yearInt > 8) {
       return NextResponse.json(
         { error: "Invalid year value. Must be 1-4." },
         { status: 400 }
@@ -108,15 +118,31 @@ export async function POST(req: NextRequest) {
     // Generate assignment ID
     const assignmentId = `ASN${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 
+    // Determine major from subject if not provided
+    let assignmentMajor = major
+    if (!assignmentMajor && subjectId) {
+      try {
+        const subject = await prisma.subject.findUnique({
+          where: { id: subjectId },
+          select: { department: true }
+        })
+        assignmentMajor = subject?.department || "General"
+      } catch (e) {
+        assignmentMajor = "General"
+      }
+    }
+    assignmentMajor = assignmentMajor || "General"
+
     // Create assignment
     const assignment = await prisma.assignment.create({
       data: {
         assignmentId,
         facultyId: faculty.facultyId,
+        subjectId: subjectId || null,
         title,
         description: description || "",
         type,
-        major,
+        major: assignmentMajor,
         year: yearInt,
         dueDate: new Date(dueDate),
         aiAllowed: aiAllowed || false,

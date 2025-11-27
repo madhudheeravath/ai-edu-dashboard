@@ -20,7 +20,9 @@ import { signOut } from "next-auth/react"
 
 const navigation = [
   { name: "Dashboard", href: "/faculty", icon: LayoutDashboard },
-  { name: "Assignments", href: "/faculty/assignments", icon: BookOpen },
+  { name: "My Subjects", href: "/faculty/subjects", icon: BookOpen },
+  { name: "Enrolled Students", href: "/faculty/enrolled-students", icon: GraduationCap },
+  { name: "Assignments", href: "/faculty/assignments", icon: FileText },
   { name: "Submissions", href: "/faculty/submissions", icon: FileText },
   { name: "Grading", href: "/faculty/grading", icon: ClipboardCheck },
   { name: "Students", href: "/faculty/students", icon: Users },

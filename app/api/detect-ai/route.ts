@@ -4,6 +4,25 @@ import { authOptions } from "@/lib/auth"
 
 const DETECTGPT_SERVICE_URL = process.env.DETECTGPT_SERVICE_URL || "https://simple-detectgpt-3mrk1v55n-madhuxx24-8951s-projects.vercel.app"
 
+// Strip HTML tags and extract prose text
+function stripHtmlAndCode(text: string): string {
+  // Remove HTML tags
+  let cleaned = text.replace(/<[^>]*>/g, ' ')
+  // Remove code blocks (anything that looks like code)
+  cleaned = cleaned.replace(/```[\s\S]*?```/g, ' ')
+  // Remove inline code
+  cleaned = cleaned.replace(/`[^`]+`/g, ' ')
+  // Remove URLs
+  cleaned = cleaned.replace(/https?:\/\/[^\s]+/g, ' ')
+  // Remove email-like patterns
+  cleaned = cleaned.replace(/[\w.-]+@[\w.-]+\.\w+/g, ' ')
+  // Remove special characters but keep punctuation
+  cleaned = cleaned.replace(/[{}[\]<>\/\\|@#$%^&*=+]/g, ' ')
+  // Collapse multiple spaces
+  cleaned = cleaned.replace(/\s+/g, ' ').trim()
+  return cleaned
+}
+
 export async function POST(req: NextRequest) {
   console.log("🟢 AI Detection API called")
   try {
@@ -19,37 +38,54 @@ export async function POST(req: NextRequest) {
     const { text, previousText } = body
     console.log(`Analyzing text length: ${text?.length || 0} chars`)
 
-    // 1. Run Local Analysis first
-    const localAnalysis = performLocalAnalysis(text)
+    // Clean the text - strip HTML/code if present
+    const cleanedText = stripHtmlAndCode(text)
+    console.log(`Cleaned text length: ${cleanedText?.length || 0} chars`)
+
+    // 1. Run Local Analysis on cleaned text
+    const localAnalysis = performLocalAnalysis(cleanedText)
+    console.log(`Local analysis: AI=${localAnalysis.aiLikelihood}%, markers=${localAnalysis.aiMarkerCount}`)
 
     // 2. Try External Service
     let finalAnalysis = localAnalysis
     let method = "Local Heuristic Analysis"
 
     try {
-      const externalAnalysis = await analyzeWithDetectGPT(text, previousText)
+      const externalAnalysis = await analyzeWithDetectGPT(cleanedText, previousText)
+      console.log(`External analysis: AI=${externalAnalysis.aiLikelihood}%`)
 
-      // 3. Hybrid Decision Logic
-      // If external service is ambiguous (40-60%), rely on local analysis
-      if (externalAnalysis.aiLikelihood > 40 && externalAnalysis.aiLikelihood < 60) {
-        finalAnalysis = localAnalysis
-        method = "Local Analysis (Resolved Ambiguity)"
-      }
-      // If external says "Human" (<50%) but we found STRONG AI markers locally (>70%), we boost it
-      else if (externalAnalysis.aiLikelihood < 50 && localAnalysis.aiLikelihood > 70) {
+      // 3. Hybrid Decision Logic - prioritize higher AI detection
+      const maxAI = Math.max(externalAnalysis.aiLikelihood, localAnalysis.aiLikelihood)
+      const avgAI = Math.round((externalAnalysis.aiLikelihood + localAnalysis.aiLikelihood) / 2)
+      
+      // If EITHER detector finds high AI (>60%), use the higher score
+      if (maxAI >= 60) {
         finalAnalysis = {
-          ...externalAnalysis,
-          aiLikelihood: Math.round((externalAnalysis.aiLikelihood + localAnalysis.aiLikelihood) / 2),
-          humanLikelihood: Math.round((externalAnalysis.humanLikelihood + localAnalysis.humanLikelihood) / 2),
-          verdict: "Mixed signals (AI patterns detected)",
-          hasAIMarkers: true,
-          aiMarkerCount: localAnalysis.aiMarkerCount
+          ...localAnalysis,
+          aiLikelihood: maxAI,
+          humanLikelihood: 100 - maxAI,
+          verdict: maxAI >= 70 ? "Highly likely AI-generated" : "Likely AI-generated",
         }
-        method = "Hybrid Analysis (Boosted)"
-      } else {
-        // Otherwise trust the external service
-        finalAnalysis = externalAnalysis
-        method = "DetectGPT-Lite Analysis"
+        method = "Hybrid Analysis (Max Score)"
+      }
+      // If both are low (<30%), trust that it's human
+      else if (externalAnalysis.aiLikelihood < 30 && localAnalysis.aiLikelihood < 30) {
+        finalAnalysis = {
+          ...localAnalysis,
+          aiLikelihood: Math.min(externalAnalysis.aiLikelihood, localAnalysis.aiLikelihood),
+          humanLikelihood: 100 - Math.min(externalAnalysis.aiLikelihood, localAnalysis.aiLikelihood),
+        }
+        method = "Hybrid Analysis (Confirmed Human)"
+      }
+      // Otherwise use average
+      else {
+        finalAnalysis = {
+          ...localAnalysis,
+          aiLikelihood: avgAI,
+          humanLikelihood: 100 - avgAI,
+          verdict: avgAI >= 50 ? "Likely AI-generated" : "Possibly AI-assisted",
+        }
+        method = "Hybrid Analysis (Average)"
       }
 
     } catch (serviceError) {
@@ -132,85 +168,212 @@ function performLocalAnalysis(text: string) {
   const words = text.trim().split(/\s+/).filter(w => w.length > 0)
   const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0)
 
-  // 1. Check for AI Markers (Keywords/Phrases)
+  if (words.length < 10) {
+    return {
+      aiLikelihood: 0,
+      humanLikelihood: 100,
+      confidence: "low",
+      wordCount: words.length,
+      sentenceCount: sentences.length,
+      avgWordsPerSentence: 0,
+      vocabularyRichness: 0,
+      readabilityScore: 0,
+      hasAIMarkers: false,
+      aiMarkerCount: 0,
+      formalityLevel: "Unknown",
+      sentenceVariation: 0,
+      hasPersonalTouch: false,
+      wordsAdded: 0,
+      wordsRemoved: 0,
+      percentageChange: 0,
+      significantlyModified: false,
+      verdict: "Too short to analyze",
+    }
+  }
+
+  // 1. AI Marker Words/Phrases (expanded list)
   const aiMarkers = [
-    /delve/i, /landscape/i, /unprecedented/i, /transformative/i, /paradigm/i,
-    /leverage/i, /harness/i, /underscores/i, /crucial/i, /imperative/i,
-    /in conclusion/i, /summary/i, /moreover/i, /furthermore/i,
-    /as an ai/i, /language model/i, /it is important to/i, /let's explore/i,
-    /tapestry/i, /nuance/i, /multifaceted/i, /comprehensive/i
+    // Classic AI phrases
+    /\bdelve\b/i, /\blandscape\b/i, /\bunprecedented\b/i, /\btransformative\b/i,
+    /\bparadigm\b/i, /\bleverage\b/i, /\bharness\b/i, /\bunderscores\b/i,
+    /\bimperative\b/i, /\btapestry\b/i, /\bnuance[ds]?\b/i, /\bmultifaceted\b/i,
+    /\bholistic\b/i, /\bseamless(ly)?\b/i, /\brobust\b/i, /\bintricate\b/i,
+    /\bpivotal\b/i, /\bfacilitate\b/i, /\boptimize\b/i, /\bstreamline\b/i,
+    
+    // Transitional/connector phrases AI loves
+    /\bmoreover\b/i, /\bfurthermore\b/i, /\bconsequently\b/i, /\bnevertheless\b/i,
+    /\bnonetheless\b/i, /\bthus\b/i, /\bhence\b/i, /\bthereby\b/i,
+    /\bin essence\b/i, /\bin summary\b/i, /\bin conclusion\b/i,
+    /\bit is (important|worth|essential|crucial|noteworthy) to (note|mention|understand|recognize)\b/i,
+    /\bthis (ensures|allows|enables|facilitates)\b/i,
+    
+    // Hedging language AI uses
+    /\bcan be seen as\b/i, /\bit('s| is) worth noting\b/i,
+    /\bone might argue\b/i, /\bit could be argued\b/i,
+    /\bthis demonstrates\b/i, /\bthis highlights\b/i,
+    /\bthis underscores\b/i, /\bthis illustrates\b/i,
+    
+    // AI structural patterns
+    /\blet's (explore|examine|delve|discuss|look at)\b/i,
+    /\bby (leveraging|utilizing|harnessing|employing)\b/i,
+    /\bplay(s)? a (crucial|vital|key|significant|pivotal) role\b/i,
+    /\b(ensuring|ensuring that|ensure that)\b/i,
+    /\b(key|core|main|primary) (takeaway|point|concept|idea)s?\b/i,
+    
+    // Overly formal/polished phrases
+    /\bcomprehensive (understanding|overview|guide|analysis)\b/i,
+    /\bwide (range|array|variety) of\b/i,
+    /\bvarious (aspects|elements|factors|components)\b/i,
+    /\b(significantly|substantially|considerably) (impact|affect|influence)\b/i,
+
+    // Educational/Tutorial AI patterns (ChatGPT loves these)
+    /\bby the end of (this|the)\b/i,
+    /\byou (should|will) be able to\b/i,
+    /\blearning outcome/i,
+    /\bthis (section|chapter|tutorial|guide) (covers|explains|discusses|introduces)\b/i,
+    /\bhere('s| is) (a|an) (example|breakdown|overview)\b/i,
+    /\b(make sure|ensure|remember) (to|that)\b/i,
+    /\b(properly|correctly|effectively|efficiently)\b/i,
+    /\bstep[- ]by[- ]step\b/i,
+    /\bbelow (is|are) (a|an|the|some)\b/i,
+    /\babove (is|are) (a|an|the|some)\b/i,
+    /\bfollowing (is|are) (a|an|the|some)\b/i,
+    /\b(note|hint|tip|remember):/i,
+    /\bfor (each|every|all) of the\b/i,
+    /\bthe (purpose|goal|objective) (of|is)\b/i,
+    /\bused (for|to) (create|make|build|define|specify)\b/i,
+    /\bthis (is|allows|enables|helps) (you|us) (to)?\b/i,
+    /\b(create|write|build|make) (a|an) (basic|simple)\b/i,
+    /\b(basic|simple|fundamental) (concept|understanding|knowledge)\b/i,
+    /\bstructure (of|for) (a|an|the)\b/i,
+    /\b(sample|example) (run|output|code)\b/i,
   ]
 
   let markerCount = 0
+  const foundMarkers: string[] = []
   aiMarkers.forEach(marker => {
-    if (marker.test(text)) markerCount++
+    const matches = text.match(marker)
+    if (matches) {
+      markerCount++
+      foundMarkers.push(matches[0])
+    }
   })
 
-  // 2. Check for Sentence Variation (AI is often very uniform)
+  // 2. Check for repetitive sentence starters (AI pattern)
+  const sentenceStarters: { [key: string]: number } = {}
+  sentences.forEach(s => {
+    const firstWords = s.trim().split(/\s+/).slice(0, 2).join(' ').toLowerCase()
+    sentenceStarters[firstWords] = (sentenceStarters[firstWords] || 0) + 1
+  })
+  const repetitiveStarters = Object.values(sentenceStarters).filter(count => count > 2).length
+
+  // 3. Check for Sentence Length Variation
   const sentenceLengths = sentences.map(s => s.trim().split(/\s+/).length)
   const avgLength = sentenceLengths.reduce((a, b) => a + b, 0) / (sentenceLengths.length || 1)
   const variance = sentenceLengths.reduce((sum, len) => sum + Math.pow(len - avgLength, 2), 0) / (sentenceLengths.length || 1)
   const stdDev = Math.sqrt(variance)
-  const variationScore = stdDev / (avgLength || 1) // Coefficient of variation
+  const variationCoeff = stdDev / (avgLength || 1)
 
-  // 3. Check for "Personal Touch" (I, me, my, we, our - AI uses these less in academic context)
-  const personalPronouns = /\b(i|me|my|mine|we|us|our|ours)\b/i
-  const hasPersonalTouch = personalPronouns.test(text)
+  // AI tends to have very uniform sentence lengths (low variation)
+  const isUniformLength = variationCoeff < 0.25 && sentences.length > 5
 
-  // Calculate Score
+  // 4. Check for Personal Touch
+  const personalPronouns = (text.match(/\b(i|me|my|mine|myself)\b/gi) || []).length
+  const hasStrongPersonalTouch = personalPronouns > 3
+
+  // 5. Check for conversational elements (more human)
+  const conversationalPatterns = /\b(honestly|actually|basically|literally|anyway|btw|lol|haha|well,|so,|like,|you know)\b/gi
+  const conversationalCount = (text.match(conversationalPatterns) || []).length
+
+  // 6. Check for typos/informal writing (more human)
+  const informalPatterns = /\b(gonna|wanna|kinda|sorta|dunno|gotta|cuz|coz|u|ur|r|n|thru)\b/gi
+  const informalCount = (text.match(informalPatterns) || []).length
+
+  // 7. Vocabulary richness (unique words / total words)
+  const uniqueWords = new Set(words.map(w => w.toLowerCase().replace(/[^a-z]/g, '')))
+  const vocabRichness = uniqueWords.size / words.length
+
+  // 8. Check for list/bullet patterns (AI loves lists)
+  const listPatterns = text.match(/^[\s]*[-•*\d.]+[\s]+/gm) || []
+  const hasLists = listPatterns.length > 3
+
+  // 9. Check for colon usage (AI overuses colons for explanations)
+  const colonCount = (text.match(/:/g) || []).length
+  const excessiveColons = colonCount > sentences.length * 0.3
+
+  // === CALCULATE AI SCORE ===
   let aiScore = 0
 
-  // Base score from markers (heavy weight)
-  aiScore += Math.min(markerCount * 20, 80)
+  // Marker-based scoring (primary signal)
+  if (markerCount >= 5) aiScore += 50
+  else if (markerCount >= 3) aiScore += 35
+  else if (markerCount >= 2) aiScore += 25
+  else if (markerCount >= 1) aiScore += 15
 
-  // Uniformity penalty (low variation = higher AI chance)
-  if (variationScore < 0.15 && sentences.length > 3) aiScore += 25
+  // Uniformity penalty
+  if (isUniformLength) aiScore += 15
 
-  // Personal touch bonus (Strongly reduces AI score)
-  if (hasPersonalTouch) aiScore -= 30
+  // Repetitive sentence starters
+  if (repetitiveStarters > 0) aiScore += repetitiveStarters * 8
 
-  // Length factor (Short text is usually Human, UNLESS markers are found)
-  if (words.length < 30 && markerCount === 0) aiScore -= 40
+  // List patterns
+  if (hasLists) aiScore += 10
 
-  // Clamp score
+  // Excessive colons
+  if (excessiveColons) aiScore += 8
+
+  // Low vocabulary richness (AI tends to repeat words)
+  if (vocabRichness < 0.5 && words.length > 100) aiScore += 12
+
+  // === HUMAN SIGNALS (reduce score) ===
+  if (hasStrongPersonalTouch) aiScore -= 25
+  if (conversationalCount > 0) aiScore -= conversationalCount * 10
+  if (informalCount > 0) aiScore -= informalCount * 15
+
+  // High vocabulary richness bonus
+  if (vocabRichness > 0.7) aiScore -= 10
+
+  // Clamp to 0-100
   aiScore = Math.max(0, Math.min(100, aiScore))
 
-  // Decisive Logic: Avoid 50/50
-  // If score is low (<30), push to 0-10 (Human)
-  if (aiScore < 30) aiScore = Math.max(0, aiScore - 10)
-
-  // If score is high (>70), push to 80-100 (AI)
-  if (aiScore > 70) aiScore = Math.min(100, aiScore + 10)
-
-  // If score is middle (30-70)
-  if (aiScore >= 30 && aiScore <= 70) {
-    if (markerCount > 0) {
-      aiScore += 15 // Lean towards AI if markers exist
-    } else {
-      aiScore = 15 // Assume human if ambiguous and no markers
-    }
-  }
+  // Determine confidence
+  let confidence = "medium"
+  if (markerCount >= 4 || aiScore >= 70) confidence = "high"
+  else if (markerCount === 0 && aiScore < 20) confidence = "high"
+  else if (words.length < 50) confidence = "low"
 
   const humanScore = 100 - aiScore
+
+  // Determine verdict
+  let verdict = "Likely human-written"
+  if (aiScore >= 70) verdict = "Highly likely AI-generated"
+  else if (aiScore >= 50) verdict = "Likely AI-generated"
+  else if (aiScore >= 30) verdict = "Mixed signals - possibly AI-assisted"
+
+  // Determine formality
+  let formalityLevel = "Moderate"
+  if (informalCount > 2 || conversationalCount > 2) formalityLevel = "Informal"
+  else if (markerCount >= 3) formalityLevel = "Formal"
 
   return {
     aiLikelihood: Math.round(aiScore),
     humanLikelihood: Math.round(humanScore),
-    confidence: markerCount > 2 ? "high" : "medium",
+    confidence,
     wordCount: words.length,
     sentenceCount: sentences.length,
-    avgWordsPerSentence: avgLength,
-    vocabularyRichness: 0.6, // Placeholder
-    readabilityScore: 0.7, // Placeholder
+    avgWordsPerSentence: Math.round(avgLength * 10) / 10,
+    vocabularyRichness: Math.round(vocabRichness * 100) / 100,
+    readabilityScore: 0.7,
     hasAIMarkers: markerCount > 0,
     aiMarkerCount: markerCount,
-    formalityLevel: "Moderate",
-    sentenceVariation: variationScore,
-    hasPersonalTouch: hasPersonalTouch,
+    formalityLevel,
+    sentenceVariation: Math.round(variationCoeff * 100) / 100,
+    hasPersonalTouch: hasStrongPersonalTouch,
     wordsAdded: 0,
     wordsRemoved: 0,
     percentageChange: 0,
     significantlyModified: false,
-    verdict: aiScore > 50 ? "Likely AI-generated" : "Likely human-written",
+    verdict,
+    foundMarkers: foundMarkers.slice(0, 5), // Show first 5 markers found
   }
 }

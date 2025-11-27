@@ -31,7 +31,8 @@ export const authOptions: NextAuthOptions = {
           }
 
           if (!user || !user.password) {
-            throw new Error("User not found")
+            console.log("User not found for email:", credentials.email)
+            return null
           }
 
           const isPasswordValid = await bcrypt.compare(
@@ -40,9 +41,11 @@ export const authOptions: NextAuthOptions = {
           )
 
           if (!isPasswordValid) {
-            throw new Error("Invalid password")
+            console.log("Invalid password for email:", credentials.email)
+            return null
           }
 
+          console.log("Login successful for:", credentials.email, "as", credentials.role)
           return {
             id: user.id,
             email: user.email,

@@ -167,6 +167,21 @@ export async function GET() {
       ? validGrades.reduce((a, b) => a + b, 0) / validGrades.length
       : 0
 
+    // Get enrolled subjects count
+    let enrolledSubjectsCount = 0
+    try {
+      const enrolledSubjects = await prisma.studentSubject.count({
+        where: {
+          studentId,
+          isActive: true
+        }
+      })
+      enrolledSubjectsCount = enrolledSubjects
+    } catch (e) {
+      // StudentSubject table might not exist yet
+      enrolledSubjectsCount = 0
+    }
+
     return NextResponse.json({
       activeAssignments,
       dueThisWeek,
@@ -179,6 +194,7 @@ export async function GET() {
       avgGrade: parseFloat(avgGrade.toFixed(2)),
       totalSubmissions: submissions.length,
       studentId,
+      enrolledSubjectsCount,
       recentSubmissions,
       upcomingAssignments,
     })
